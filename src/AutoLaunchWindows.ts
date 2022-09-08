@@ -1,11 +1,7 @@
 import { existsSync } from "fs";
 import { join, dirname, basename } from "path";
-import Winreg, { HKCU, REG_SZ } from "winreg";
+import Winreg, { HKLM, HKCU, REG_SZ } from "winreg";
 
-const regKey = new Winreg({
-	hive: HKCU,
-	key: "\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
-});
 
 export interface AutoLaunchWindows {
 	enable: typeof enable;
@@ -13,12 +9,17 @@ export interface AutoLaunchWindows {
 	isEnabled: typeof isEnabled;
 }
 
-export function enable({ appName, appPath, isHiddenOnLaunch }: {
+export function enable({ appName, appPath, isHiddenOnLaunch, global }: {
 	appName: string;
 	appPath: string;
 	isHiddenOnLaunch: boolean;
+	global: boolean;
 }) {
 	return new Promise<boolean | Error>(function (resolve, reject) {
+		const regKey = new Winreg({
+			hive: global ? HKLM : HKCU,
+			key: "\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+		});
 		let pathToAutoLaunchedApp = appPath;
 		let args = "";
 		const updateDotExe = join(
@@ -59,8 +60,12 @@ export function enable({ appName, appPath, isHiddenOnLaunch }: {
 		);
 	});
 }
-export function disable(appName: string) {
+export function disable(appName: string, global:boolean) {
 	return new Promise<boolean | Error>((resolve, reject) =>
+		const regKey = new Winreg({
+			hive: global ? HKLM : HKCU,
+			key: "\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+		});
 		regKey.remove(appName, function (err) {
 			if (err != null) {
 				// The registry key should exist but in case it fails because it doesn't exist, resolve false instead
@@ -78,8 +83,12 @@ export function disable(appName: string) {
 		})
 	);
 }
-export function isEnabled(appName: string) {
+export function isEnabled(appName: string, global:boolean) {
 	return new Promise<boolean>((resolve) =>
+		const regKey = new Winreg({
+			hive: global ? HKLM : HKCU,
+			key: "\\Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+		});
 		regKey.get(appName, function (err, item) {
 			if (err != null) {
 				return resolve(false);
